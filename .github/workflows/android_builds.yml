@@ -119,7 +119,8 @@ jobs:
           
           # Build and install
           make -j$(nproc)
-          make install
+          # Install without stripping (STRIPPROG="" disables stripping)
+          make install STRIPPROG=""
           
           echo "FFmpeg build complete. Checking output:"
           ls -lh ../ffmpeg-android/lib/
