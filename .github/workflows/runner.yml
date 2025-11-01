@@ -39,12 +39,18 @@ jobs:
     with:
       artifact-name: linux_template_release
       target: template_release
+  android-build-release:
+    name: 🤖 Android Release
+    uses: ./.github/workflows/android_builds.yml
+    with:
+      artifact-name: android_template_release
+      target: template_release
   static-checks:
     name: 📊 Static checks
     uses: ./.github/workflows/static_checks.yml
   publish_release:
     name: Publish release
-    needs: [windows-build-debug, windows-build-release, linux-build-release, linux-build-debug]
+    needs: [windows-build-debug, windows-build-release, linux-build-release, linux-build-debug, android-build-release]
     runs-on: ubuntu-latest
     if: github.event.inputs.doRelease
     steps:
@@ -69,6 +75,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: linux_template_debug
+          path: artifacts_windows
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android_template_release
           path: artifacts_windows
       - name: Calculate short sha
         id: vars
