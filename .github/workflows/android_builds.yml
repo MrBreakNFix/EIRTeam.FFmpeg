@@ -33,7 +33,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential make autoconf automake libtool pkg-config
+          sudo apt-get install -y build-essential make autoconf automake libtool pkg-config ninja-build
 
       - name: Bootstrap FFmpeg-kit
         run: make bootstrap
