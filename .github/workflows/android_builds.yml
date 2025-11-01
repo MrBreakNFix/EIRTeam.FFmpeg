@@ -24,7 +24,10 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Set up Android NDK
+      - name: Remove pre-installed NDK
+        run: sudo rm -rf /usr/local/lib/android/sdk/ndk
+
+      - name: Set up Android NDK r25c
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
