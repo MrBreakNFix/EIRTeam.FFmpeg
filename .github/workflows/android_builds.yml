@@ -87,8 +87,9 @@ jobs:
           export AS=$CC
           export LD=$TOOLCHAIN/bin/ld
           export RANLIB=$TOOLCHAIN/bin/llvm-ranlib
-          export STRIP=$TOOLCHAIN/bin/llvm-strip
           export NM=$TOOLCHAIN/bin/llvm-nm
+          # Set STRIP to the NDK strip tool
+          NDK_STRIP=$TOOLCHAIN/bin/llvm-strip
           
           # Configure FFmpeg for Android arm64
           ./configure \
@@ -99,6 +100,9 @@ jobs:
             --cpu=armv8-a \
             --cc=$CC \
             --cxx=$CXX \
+            --ar=$AR \
+            --ranlib=$RANLIB \
+            --strip=$NDK_STRIP \
             --enable-shared \
             --disable-static \
             --disable-doc \
@@ -114,13 +118,13 @@ jobs:
             --disable-v4l2-m2m \
             --disable-vaapi \
             --disable-vdpau \
+            --disable-stripping \
             --extra-cflags="-Os -fPIC" \
             --extra-ldflags="-Wl,-rpath-link=$TOOLCHAIN/sysroot/usr/lib/$TARGET/$API"
           
           # Build and install
           make -j$(nproc)
-          # Install without stripping (STRIPPROG="" disables stripping)
-          make install STRIPPROG=""
+          make install
           
           echo "FFmpeg build complete. Checking output:"
           ls -lh ../ffmpeg-android/lib/
