@@ -1,0 +1,52 @@
+name: 'Android Build'
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        description: 'Build target'
+        required: true
+        type: string
+      artifact-name:
+        description: 'Artifact name'
+        required: false
+        type: string
+        default: 'android-build'
+
+jobs:
+  build:
+    name: 'Build for Android'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r25c
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential make autoconf automake libtool pkg-config
+
+      - name: Bootstrap FFmpeg-kit
+        run: make bootstrap
+
+      - name: Build for Android arm64-v8a
+        run: make gdextension PLATFORM=android TARGET_ARCH=arm64-v8a
+
+      - name: Build for Android armeabi-v7a
+        run: make gdextension PLATFORM=android TARGET_ARCH=armeabi-v7a
+
+      - name: Package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: |
+            ./addons/eirteam_ffmpeg/bin/android*
