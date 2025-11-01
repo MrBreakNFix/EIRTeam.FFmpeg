@@ -62,35 +62,75 @@ jobs:
           
           echo "Downloading pre-built FFmpeg for Android..."
           
-          # Try to download from EIRTeam FFmpeg-Builds first (matches Linux/Windows pattern)
-          if wget -q "https://github.com/EIRTeam/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-android-arm64-lgpl-godot.tar.xz" -O ffmpeg.tar.xz; then
-            echo "Downloaded from EIRTeam FFmpeg-Builds"
-            tar xf ffmpeg.tar.xz -C ffmpeg-android --strip-components=1
-          elif wget -q "https://github.com/arthenica/ffmpeg-kit/releases/download/v6.0/ffmpeg-kit-min-6.0-android.aar" -O ffmpeg-kit.aar; then
-            echo "Downloaded ffmpeg-kit AAR"
-            # Extract libraries from AAR
-            unzip -q ffmpeg-kit.aar -d ffmpeg-aar
-            
-            # Copy arm64-v8a libraries
-            if [ -d "ffmpeg-aar/jni/arm64-v8a" ]; then
-              cp ffmpeg-aar/jni/arm64-v8a/*.so ffmpeg-android/lib/
+          # Try multiple sources in order
+          SUCCESS=0
+          
+          # Source 1: Try BtbN/FFmpeg-Builds (known to have Android builds)
+          echo "Trying BtbN/FFmpeg-Builds..."
+          if wget --spider -q "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-android24-lgpl-arm64.tar.xz" 2>/dev/null; then
+            if wget -q "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-android24-lgpl-arm64.tar.xz" -O ffmpeg.tar.xz; then
+              echo "Downloaded from BtbN/FFmpeg-Builds"
+              tar xf ffmpeg.tar.xz
+              # Find the extracted directory
+              EXTRACTED_DIR=$(tar -tf ffmpeg.tar.xz | head -1 | cut -f1 -d"/")
+              if [ -d "$EXTRACTED_DIR" ]; then
+                cp -r "$EXTRACTED_DIR"/* ffmpeg-android/
+                SUCCESS=1
+              fi
             fi
-            
-            # Extract includes from prefab
-            if [ -d "ffmpeg-aar/prefab" ]; then
-              for module in ffmpeg-aar/prefab/modules/*/include; do
-                if [ -d "$module" ]; then
-                  cp -r "$module"/* ffmpeg-android/include/ 2>/dev/null || true
+          fi
+          
+          # Source 2: Try arthenica/ffmpeg-kit AAR
+          if [ $SUCCESS -eq 0 ]; then
+            echo "Trying arthenica/ffmpeg-kit AAR..."
+            if wget -q "https://github.com/arthenica/ffmpeg-kit/releases/download/v6.0/ffmpeg-kit-min-gpl-6.0.aar" -O ffmpeg-kit.aar; then
+              echo "Downloaded ffmpeg-kit AAR"
+              unzip -q ffmpeg-kit.aar -d ffmpeg-aar
+              
+              # Copy arm64-v8a libraries
+              if [ -d "ffmpeg-aar/jni/arm64-v8a" ]; then
+                cp ffmpeg-aar/jni/arm64-v8a/*.so ffmpeg-android/lib/
+                
+                # Extract includes from prefab modules
+                if [ -d "ffmpeg-aar/prefab" ]; then
+                  for module_dir in ffmpeg-aar/prefab/modules/*; do
+                    if [ -d "$module_dir/include" ]; then
+                      cp -r "$module_dir"/include/* ffmpeg-android/include/ 2>/dev/null || true
+                    fi
+                  done
                 fi
-              done
+                
+                # Check if we got libraries
+                if ls ffmpeg-android/lib/*.so 1> /dev/null 2>&1; then
+                  SUCCESS=1
+                fi
+              fi
             fi
-          else
-            echo "ERROR: Could not download FFmpeg binaries"
+          fi
+          
+          # Source 3: Use pre-built from a CDN mirror
+          if [ $SUCCESS -eq 0 ]; then
+            echo "Trying alternative mirror..."
+            if wget -q "https://sourceforge.net/projects/avbuild/files/android/ffmpeg-master-android-clang-arm64.tar.xz/download" -O ffmpeg.tar.xz; then
+              echo "Downloaded from SourceForge mirror"
+              tar xf ffmpeg.tar.xz -C ffmpeg-android --strip-components=1 2>/dev/null || tar xf ffmpeg.tar.xz
+              if [ -d "ffmpeg-android/lib" ] && ls ffmpeg-android/lib/*.so 1> /dev/null 2>&1; then
+                SUCCESS=1
+              fi
+            fi
+          fi
+          
+          if [ $SUCCESS -eq 0 ]; then
+            echo "ERROR: Could not download FFmpeg binaries from any source"
+            echo "Attempted sources:"
+            echo "  1. BtbN/FFmpeg-Builds"
+            echo "  2. arthenica/ffmpeg-kit AAR"
+            echo "  3. SourceForge mirror"
             exit 1
           fi
           
           echo "FFmpeg setup complete. Libraries:"
-          ls -lh ffmpeg-android/lib/
+          ls -lh ffmpeg-android/lib/ || echo "No lib directory"
           echo "Headers:"
           find ffmpeg-android/include -type f -name "*.h" | head -10 || echo "No headers found"
 
