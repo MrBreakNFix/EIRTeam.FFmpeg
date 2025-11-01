@@ -110,6 +110,10 @@ jobs:
             --disable-ffplay \
             --disable-ffprobe \
             --disable-avdevice \
+            --disable-vulkan \
+            --disable-v4l2-m2m \
+            --disable-vaapi \
+            --disable-vdpau \
             --extra-cflags="-Os -fPIC" \
             --extra-ldflags="-Wl,-rpath-link=$TOOLCHAIN/sysroot/usr/lib/$TARGET/$API"
           
